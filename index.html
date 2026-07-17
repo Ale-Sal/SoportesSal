@@ -337,12 +337,16 @@ async function simularEscaneo(event) {
 
         // --- ALGORITMO DE DETECCIÓN AUTOMÁTICA (Mapeo por palabras clave) ---
         // Intenta extraer valores buscando patrones comunes en hojas de soporte
-        document.getElementById('scan-nombre').value = detectarCampo(textoExtraido, /(?:usuario|nombre|solicitante|atendido a)[:\s]+([^\n]+)/i) || "";
-        document.getElementById('scan-depto').value = detectarCampo(textoExtraido, /(?:depto|departamento|servicio|área|area)[:\s]+([^\n]+)/i) || "";
-        document.getElementById('scan-tecnico').value = detectarCampo(textoExtraido, /(?:técnico|tecnico|encargado|asignado)[:\s]+([^\n]+)/i) || "";
-        document.getElementById('scan-problema').value = detectarCampo(textoExtraido, /(?:problema|inconveniente|falla|reporte)[:\s]+([^\n]+)/i) || "";
-        document.getElementById('scan-diagnostico').value = detectarCampo(textoExtraido, /(?:diagnóstico|diagnostico|causa)[:\s]+([^\n]+)/i) || "";
-        document.getElementById('scan-solucion').value = detectarCampo(textoExtraido, /(?:solución|solucion|acción|accion realizada)[:\s]+([^\n]+)/i) || "";
+document.getElementById('scan-nombre').value = detectarCampo(textoExtraido, /(?:usuario|nombre|solicitante|atendido a)[:\s]+([^\n]+)/i) || "";
+document.getElementById('scan-depto').value = detectarCampo(textoExtraido, /(?:depto|departamento|servicio|área|area)[:\s]+([^\n]+)/i) || "";
+document.getElementById('scan-tecnico').value = detectarCampo(textoExtraido, /(?:técnico|tecnico|encargado|asignado|atendido por:)[:\s]+([^\n]+)/i) || "";
+
+// MODIFICADO: Captura la línea actual y hasta 5 líneas de abajo si existen
+document.getElementById('scan-problema').value = detectarCampo(textoExtraido, /(?:problema|inconveniente|falla|reporte)[:\s]+((?:[^\n]+\n?){1,5})/i) || "";
+document.getElementById('scan-diagnostico').value = detectarCampo(textoExtraido, /(?:diagnóstico|diagnostico|causa)[:\s]+([^\n]+)/i) || "";
+
+// MODIFICADO: Captura la línea actual y hasta 5 líneas de abajo si existen
+document.getElementById('scan-solucion').value = detectarCampo(textoExtraido, /(?:solución|solucion|acción|accion realizada)[:\s]+((?:[^\n]+\n?){1,5})/i) || "";
 
         // Si el algoritmo no logra clasificar todo perfectamente debido a la tipografía,
         // agregamos una sección de respaldo para que veas TODO el bloque de texto crudo de la hoja.
