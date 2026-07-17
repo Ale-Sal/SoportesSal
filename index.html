@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans antialiased">
 
@@ -307,27 +308,75 @@
             if(vistaId === 'historial') renderizarHistorial();
         }
 
-        // 3. SIMULACIÓN DE ESCANEO OCR AVANZADO
-        function simularEscaneo(event) {
-            if(!event.target.files.length) return;
+        // 3. ESCANEO OCR REAL CON TESSERACT.JS
+async function simularEscaneo(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
-            document.getElementById('scan-prompt').classList.add('hidden');
-            document.getElementById('scan-loading').classList.remove('hidden');
+    // Mostrar pantalla de carga y ocultar el prompt inicial
+    document.getElementById('scan-prompt').classList.add('hidden');
+    document.getElementById('scan-loading').classList.remove('hidden');
+    document.getElementById('resultado-ocr').classList.add('hidden');
 
-            setTimeout(() => {
-                document.getElementById('scan-loading').classList.add('hidden');
-                document.getElementById('scan-prompt').classList.remove('hidden');
-                document.getElementById('resultado-ocr').classList.remove('hidden');
+    try {
+        // Inicializa el reconocimiento en idioma español ('spa')
+        const resultado = await Tesseract.recognize(file, 'spa', {
+            logger: m => console.log(m) // Opcional: Muestra el progreso en la consola
+        });
 
-                document.getElementById('scan-fecha').value = new Date().toISOString().split('T')[0];
-                document.getElementById('scan-nombre').value = "Ing. Carlos Mendoza";
-                document.getElementById('scan-depto').value = "Recursos Humanos";
-                document.getElementById('scan-tecnico').value = "Soporte Central";
-                document.getElementById('scan-problema').value = "Impresora no se conecta al segmento de red local tras mantenimiento estructural";
-                document.getElementById('scan-diagnostico').value = "Dirección IP estática desconfigurada en la tarjeta de red del equipo de impresión";
-                document.getElementById('scan-solucion').value = "Asignación manual de dirección IP libre y pruebas exitosas de comunicación de red";
-            }, 2500);
-        }
+        const textoExtraido = resultado.data.text;
+        console.log("Texto extraído del documento:", textoExtraido);
+
+        // Volver a mostrar el prompt y activar el contenedor de resultados
+        document.getElementById('scan-loading').classList.add('hidden');
+        document.getElementById('scan-prompt').classList.remove('hidden');
+        document.getElementById('resultado-ocr').classList.remove('hidden');
+
+        // Asignar la fecha de hoy por defecto
+        document.getElementById('scan-fecha').value = new Date().toISOString().split('T')[0];
+
+        // --- ALGORITMO DE DETECCIÓN AUTOMÁTICA (Mapeo por palabras clave) ---
+        // Intenta extraer valores buscando patrones comunes en hojas de soporte
+        document.getElementById('scan-nombre').value = detectarCampo(textoExtraido, /(?:usuario|nombre|solicitante|atendido a)[:\s]+([^\n]+)/i) || "";
+        document.getElementById('scan-depto').value = detectarCampo(textoExtraido, /(?:depto|departamento|servicio|área|area)[:\s]+([^\n]+)/i) || "";
+        document.getElementById('scan-tecnico').value = detectarCampo(textoExtraido, /(?:técnico|tecnico|encargado|asignado)[:\s]+([^\n]+)/i) || "";
+        document.getElementById('scan-problema').value = detectarCampo(textoExtraido, /(?:problema|inconveniente|falla|reporte)[:\s]+([^\n]+)/i) || "";
+        document.getElementById('scan-diagnostico').value = detectarCampo(textoExtraido, /(?:diagnóstico|diagnostico|causa)[:\s]+([^\n]+)/i) || "";
+        document.getElementById('scan-solucion').value = detectarCampo(textoExtraido, /(?:solución|solucion|acción|accion realizada)[:\s]+([^\n]+)/i) || "";
+
+        // Si el algoritmo no logra clasificar todo perfectamente debido a la tipografía,
+        // agregamos una sección de respaldo para que veas TODO el bloque de texto crudo de la hoja.
+        insertarBloqueDeTextoCrudo(textoExtraido);
+
+    } catch (error) {
+        console.error("Error procesando el OCR:", error);
+        alert("No se pudo procesar la imagen. Asegúrate de que sea clara, tenga buena iluminación y el texto sea legible.");
+        document.getElementById('scan-loading').classList.add('hidden');
+        document.getElementById('scan-prompt').classList.remove('hidden');
+    }
+}
+
+// Función auxiliar para buscar patrones de texto usando expresiones regulares
+function detectarCampo(texto, expresionRegular) {
+    const coincidencia = texto.match(expresionRegular);
+    return coincidencia ? coincidencia[1].trim() : null;
+}
+
+// Agrega un cuadro de texto al final del formulario para copiar/pegar manualmente si el OCR falla en algún campo
+function insertarBloqueDeTextoCrudo(texto) {
+    let contenedorCrudo = document.getElementById('ocr-texto-crudo');
+    if (!contenedorCrudo) {
+        contenedorCrudo = document.createElement('div');
+        contenedorCrudo.id = 'ocr-texto-crudo';
+        contenedorCrudo.className = 'mt-4 pt-4 border-t border-gray-200';
+        contenedorCrudo.innerHTML = `
+            <label class="block text-xs font-semibold text-gray-500 uppercase">Texto completo detectado (Por si necesitas copiar manualmente):</label>
+            <textarea id="scan-crudo-textarea" rows="4" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5 bg-gray-50 text-xs font-mono text-gray-600" readonly></textarea>
+        `;
+        document.getElementById('resultado-ocr').insertBefore(contenedorCrudo, document.getElementById('scan-actividad').parentNode);
+    }
+    document.getElementById('scan-crudo-textarea').value = texto;
+}
 
         // 4. SYNC CON SUPABASE: OBTENER DATOS
         async function cargarDatosDesdeSupabase() {
