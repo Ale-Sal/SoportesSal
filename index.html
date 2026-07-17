@@ -3,178 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Soporte TI - Sincronizado en la Nube</title>
+    <title>Sistema de Gestión de Soporte TI</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Incluimos la librería oficial de Supabase para conectar la web con la base de datos -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 font-sans antialiased">
 
-    <!-- ================= CONTENIDO PRINCIPAL (Abierto por defecto) ================= -->
-    <div id="main-content" class="min-h-screen flex flex-col md:flex-row">
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80 px-4">
+        <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+            <div class="mb-6 text-center">
+                <div class="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                    <i data-lucide="shield-check" class="h-6 w-6"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Control de Soporte TI</h2>
+                <p class="text-sm text-gray-500">Ingresa las credenciales del sistema</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Usuario</label>
+                    <input type="text" id="username" class="mt-1 w-full rounded-lg border border-gray-300 p-3 shadow-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition" placeholder="admin">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input type="password" id="password" class="mt-1 w-full rounded-lg border border-gray-300 p-3 shadow-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition" placeholder="••••••••">
+                </div>
+                <p id="login-error" class="hidden text-sm font-medium text-red-500"></p>
+                <button onclick="intentarLogin()" class="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 transition shadow-md">
+                    Iniciar Sesión
+                </button>
+            </div>
+            <div class="mt-4 text-center text-xs text-gray-400">
+                Credenciales por defecto: <span class="font-mono text-gray-600">admin / admin123</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content" class="hidden min-h-screen flex flex-col md:flex-row">
         
-        <!-- SIDEBAR -->
         <aside class="w-full md:w-64 bg-slate-900 text-white flex flex-col shadow-xl">
             <div class="p-5 border-b border-slate-800 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <i data-lucide="terminal" class="text-blue-400"></i>
                     <span class="font-bold text-lg tracking-wider">PANEL TI</span>
                 </div>
+                <button onclick="logout()" class="text-slate-400 hover:text-red-400 md:hidden">
+                    <i data-lucide="log-out"></i>
+                </button>
             </div>
             <nav class="flex-1 p-4 space-y-2">
-                <button onclick="cambiarVista('dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left bg-slate-800 text-blue-400 font-medium">
+                <button onclick="cambiarVista('dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left bg-slate-800 text-blue-400 font-medium transition">
                     <i data-lucide="layout-dashboard"></i> Dashboard
                 </button>
-                <button onclick="cambiarVista('escanear')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white">
+                <button onclick="cambiarVista('escanear')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white transition">
                     <i data-lucide="scan-line"></i> Escanear Documento
                 </button>
-                <button onclick="cambiarVista('escribir')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white">
+                <button onclick="cambiarVista('escribir')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white transition">
                     <i data-lucide="file-text"></i> Escribir Soporte
                 </button>
-                <button onclick="cambiarVista('historial')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white">
+                <button onclick="cambiarVista('historial')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white transition">
                     <i data-lucide="history"></i> Ver Párrafos Rescritos
                 </button>
             </nav>
+            <div class="p-4 border-t border-slate-800 hidden md:block">
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-red-600/20 hover:bg-red-600 py-2 rounded-lg text-red-400 hover:text-white transition text-sm font-medium">
+                    <i data-lucide="log-out" class="h-4 w-4"></i> Cerrar Sesión
+                </button>
+            </div>
         </aside>
 
-        <!-- AREA DE TRABAJO -->
         <main class="flex-1 p-4 md:p-8 overflow-y-auto">
             
-            <!-- DASHBOARD CON DOS GRÁFICOS (BARRAS + PASTEL) -->
             <section id="vista-dashboard" class="vista space-y-6">
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Dashboard de Estadísticas (En la Nube)</h1>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="bg-white p-5 rounded-xl border border-gray-200 flex items-center justify-between">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Dashboard Estadístico</h1>
+                    <span class="text-sm bg-blue-100 text-blue-800 font-medium px-3 py-1 rounded-full">En Línea</span>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-xs border border-gray-200 flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 uppercase">Total Atenciones Globales</p>
+                            <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Atenciones</p>
                             <h3 id="card-total" class="text-3xl font-bold text-gray-800 mt-1">0</h3>
                         </div>
                         <div class="p-3 bg-blue-50 rounded-lg text-blue-600"><i data-lucide="activity"></i></div>
                     </div>
-                    <div class="bg-white p-5 rounded-xl border border-gray-200 flex items-center justify-between">
+                    <div class="bg-white p-5 rounded-xl shadow-xs border border-gray-200 flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 uppercase">Último Usuario Atendido</p>
+                            <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Último Registro</p>
                             <h3 id="card-ultimo" class="text-sm font-semibold text-gray-700 mt-2 truncate max-w-[180px]">Ninguno</h3>
                         </div>
                         <div class="p-3 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="clock"></i></div>
                     </div>
                 </div>
 
-                <!-- Contenedor Responsivo para Gráficos Combinados -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Gráfico de Barras -->
-                    <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200">
-                        <h2 class="text-md font-bold text-gray-700 mb-4 uppercase tracking-wider">Métricas en Barras</h2>
-                        <div class="relative w-full aspect-square max-h-[300px] mx-auto flex justify-center">
-                            <canvas id="graficoActividades"></canvas>
-                        </div>
-                    </div>
-                    <!-- Gráfico de Pastel -->
-                    <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200">
-                        <h2 class="text-md font-bold text-gray-700 mb-4 uppercase tracking-wider">Distribución Porcentual (Pastel)</h2>
-                        <div class="relative w-full aspect-square max-h-[300px] mx-auto flex justify-center">
-                            <canvas id="graficoPastel"></canvas>
-                        </div>
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-xs border border-gray-200">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Métricas por Tipos de Actividad Realizada</h2>
+                    <div class="relative w-full aspect-square max-h-[350px] md:max-h-[400px] mx-auto flex justify-center">
+                        <canvas id="graficoActividades"></canvas>
                     </div>
                 </div>
             </section>
 
-            <!-- ESCANEAR DOCUMENTO -->
             <section id="vista-escanear" class="vista hidden space-y-6">
                 <h1 class="text-2xl font-bold text-gray-800">Escanear Hoja Física</h1>
-                <div class="bg-white p-6 rounded-xl border border-gray-200 space-y-6">
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 relative">
+                <div class="bg-white p-6 rounded-xl shadow-xs border border-gray-200 space-y-6">
+                    <p class="text-gray-600 text-sm">Sube una fotografía o apunta con la cámara de tu teléfono a la hoja física de soporte para extraer los datos mediante análisis automático.</p>
+                    
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer relative">
                         <input type="file" id="input-scan" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="simularEscaneo(event)">
                         <div class="space-y-2" id="scan-prompt">
                             <i data-lucide="camera" class="mx-auto h-12 w-12 text-gray-400"></i>
-                            <p class="text-blue-600 font-semibold">Toma una foto con tu teléfono o selecciona una imagen</p>
+                            <p class="text-blue-600 font-semibold">Toma una foto o selecciona una imagen</p>
+                            <p class="text-xs text-gray-400">Formatos permitidos: JPG, PNG</p>
                         </div>
                         <div class="hidden space-y-3" id="scan-loading">
                             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-                            <p class="text-blue-600 font-medium">Procesando OCR...</p>
+                            <p class="text-blue-600 font-medium animate-pulse">Procesando OCR y extrayendo campos de texto...</p>
                         </div>
                     </div>
 
                     <div id="resultado-ocr" class="hidden space-y-4 border-t border-gray-200 pt-6">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div><label class="text-xs font-semibold text-gray-600">Fecha</label><input type="date" id="scan-fecha" class="w-full border rounded-lg p-2.5 bg-gray-50"></div>
-                            <div><label class="text-xs font-semibold text-gray-600">Nombre</label><input type="text" id="scan-nombre" class="w-full border rounded-lg p-2.5"></div>
-                            <div><label class="text-xs font-semibold text-gray-600">Departamento</label><input type="text" id="scan-depto" class="w-full border rounded-lg p-2.5"></div>
-                            <div><label class="text-xs font-semibold text-gray-600">Técnico</label><input type="text" id="scan-tecnico" class="w-full border rounded-lg p-2.5"></div>
+                        <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg text-sm text-amber-800">
+                            <strong>Texto Extraído con Éxito:</strong> Por favor verifica la información recuperada de la hoja física antes de clasificarla.
                         </div>
-                        <div><label class="text-xs font-semibold text-gray-600">Problema</label><textarea id="scan-problema" rows="2" class="w-full border rounded-lg p-2.5"></textarea></div>
-                        <div><label class="text-xs font-semibold text-gray-600">Diagnóstico</label><textarea id="scan-diagnostico" rows="2" class="w-full border rounded-lg p-2.5"></textarea></div>
-                        <div><label class="text-xs font-semibold text-gray-600">Solución</label><textarea id="scan-solucion" rows="2" class="w-full border rounded-lg p-2.5"></textarea></div>
-                        
-                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                            <label class="block text-sm font-bold text-blue-900 mb-2">❓ Actividad del escaneo:</label>
-                            <select id="scan-actividad" class="w-full bg-white border border-blue-300 rounded-lg p-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase">Fecha</label>
+                                <input type="date" id="scan-fecha" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5 bg-gray-50">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase">Nombre de la persona</label>
+                                <input type="text" id="scan-nombre" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase">Departamento o Servicio</label>
+                                <input type="text" id="scan-depto" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase">Técnico Asignado</label>
+                                <input type="text" id="scan-tecnico" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase">Problema o Inconveniente</label>
+                            <textarea id="scan-problema" rows="2" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase">Diagnóstico</label>
+                            <textarea id="scan-diagnostico" rows="2" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase">Solución</label>
+                            <textarea id="scan-solucion" rows="2" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+                        </div>
+
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 mt-6">
+                            <label class="block text-sm font-bold text-blue-900 mb-2">❓ ¿A qué tipo de actividad corresponde este documento escaneado?</label>
+                            <select id="scan-actividad" class="w-full bg-white border border-blue-300 rounded-lg p-3 text-gray-800 font-medium outline-none focus:ring-2 focus:ring-blue-400">
                                 <option value="Soporte técnico brindado ante inconvenientes a usuarios">1. Soporte técnico brindado ante inconvenientes a usuarios</option>
                                 <option value="Hardware reparado, diagnosticado o gestión de garantía">2. Hardware reparado, diagnosticado o gestión de garantía</option>
-                                <option value="Mantenimiento preventivo y correctivo a equipos">3. Mantenimiento preventivo y correctivo brindado a equipos</option>
+                                <option value="Mantenimiento preventivo y correctivo a equipos">3. Mantenimiento preventivo y correctivo brindado a equipos de cómputo/impresión</option>
                                 <option value="Puntos de red elaborados o reestructurados">4. Puntos de red elaborados, reestructurados</option>
                                 <option value="Configuración de usuarios de dominio, correo o sistemas">5. Usuarios de dominio, correo electrónico y sistemas configurados</option>
                                 <option value="Otras actividades">6. Otras actividades</option>
                             </select>
                         </div>
-                        <button onclick="guardarSoporte('scan')" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg shadow-md cursor-pointer">Guardar en Base de Datos Online</button>
+
+                        <button onclick="guardarSoporte('scan')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition shadow-md flex items-center justify-center gap-2">
+                            <i data-lucide="check-circle"></i> Procesar y Guardar Registro
+                        </button>
                     </div>
                 </div>
             </section>
 
-            <!-- ESCRIBIR SOPORTE -->
             <section id="vista-escribir" class="vista hidden space-y-6">
                 <h1 class="text-2xl font-bold text-gray-800">Formulario Manual de Soporte</h1>
-                <div class="bg-white p-6 rounded-xl border border-gray-200 space-y-4">
+                <div class="bg-white p-6 rounded-xl shadow-xs border border-gray-200 space-y-4">
                     <div>
-                        <label class="text-xs font-semibold text-gray-600 uppercase">Tipo de Actividad</label>
-                        <select id="manual-actividad" class="w-full border rounded-lg p-2.5 bg-white">
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo de Actividad</label>
+                        <select id="manual-actividad" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5 bg-white">
                             <option value="Soporte técnico brindado ante inconvenientes a usuarios">1. Soporte técnico brindado ante inconvenientes a usuarios</option>
                             <option value="Hardware reparado, diagnosticado o gestión de garantía">2. Hardware reparado, diagnosticado o gestión de garantía</option>
-                            <option value="Mantenimiento preventivo y correctivo a equipos">3. Mantenimiento preventivo y correctivo brindado a equipos</option>
+                            <option value="Mantenimiento preventivo y correctivo a equipos">3. Mantenimiento preventivo y correctivo brindado a equipos de cómputo/impresión</option>
                             <option value="Puntos de red elaborados o reestructurados">4. Puntos de red elaborados, reestructurados</option>
                             <option value="Configuración de usuarios de dominio, correo o sistemas">5. Usuarios de dominio, correo electrónico y sistemas configurados</option>
                             <option value="Otras actividades">6. Otras actividades</option>
                         </select>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div><label class="text-xs font-semibold text-gray-600">Fecha</label><input type="date" id="manual-fecha" class="w-full border rounded-lg p-2.5"></div>
-                        <div><label class="text-xs font-semibold text-gray-600">Nombre de la Persona</label><input type="text" id="manual-nombre" class="w-full border rounded-lg p-2.5"></div>
-                        <div><label class="text-xs font-semibold text-gray-600">Departamento</label><input type="text" id="manual-depto" class="w-full border rounded-lg p-2.5"></div>
-                        <div><label class="text-xs font-semibold text-gray-600">Técnico</label><input type="text" id="manual-tecnico" class="w-full border rounded-lg p-2.5"></div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</label>
+                            <input type="date" id="manual-fecha" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre de la Persona</label>
+                            <input type="text" id="manual-nombre" placeholder="Ej. Juan Pérez" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Departamento o Servicio</label>
+                            <input type="text" id="manual-depto" placeholder="Ej. Contabilidad" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Técnico</label>
+                            <input type="text" id="manual-tecnico" placeholder="Ej. Técnico Auxiliar" class="mt-1 w-full border border-gray-300 rounded-lg p-2.5">
+                        </div>
                     </div>
-                    <div><label class="text-xs font-semibold text-gray-600">Problema</label><textarea id="manual-problema" rows="2" class="w-full border rounded-lg p-2.5"></textarea></div>
-                    <div><label class="text-xs font-semibold text-gray-600">Diagnóstico</label><textarea id="manual-diagnostico" rows="2" class="w-full border rounded-lg p-2.5"></textarea></div>
-                    <div><label class="text-xs font-semibold text-gray-600">Solución</label><textarea id="manual-solucion" rows="2" class="w-full border rounded-lg p-2.5"></textarea></div>
-                    <button onclick="guardarSoporte('manual')" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md mt-4 cursor-pointer">Guardar Registro en la Nube</button>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Problema o Inconveniente</label>
+                        <textarea id="manual-problema" rows="2" placeholder="Falla reportada..." class="mt-1 w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Diagnóstico</label>
+                        <textarea id="manual-diagnostico" rows="2" placeholder="Causa raíz encontrada..." class="mt-1 w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Solución</label>
+                        <textarea id="manual-solucion" rows="2" placeholder="Acciones realizadas..." class="mt-1 w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+                    </div>
+                    <button onclick="guardarSoporte('manual')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md flex items-center justify-center gap-2 mt-4">
+                        <i data-lucide="save"></i> Guardar Registro Manual
+                    </button>
                 </div>
             </section>
 
-            <!-- HISTORIAL DE PÁRRAFOS -->
             <section id="vista-historial" class="vista hidden space-y-6">
-                <h1 class="text-2xl font-bold text-gray-800">Párrafos de Soporte Sincronizados (Nube)</h1>
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-bold text-gray-800">Párrafos de Soporte Reescritos</h1>
+                    <button onclick="limpiarHistorial()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-medium px-3 py-2 rounded-lg transition">
+                        Limpiar Base de Datos
+                    </button>
+                </div>
+                
                 <div id="contenedor-parrafos" class="space-y-4"></div>
             </section>
 
         </main>
     </div>
 
-    <!-- ================= LOGICA DE CONTROL Y BASE DE DATOS ================= -->
     <script>
+        // Inicializar iconos de Lucide
         lucide.createIcons();
 
-        // ⚠️ ENLACES DE CONEXIÓN DE SUPABASE (Recuerda colocar tus credenciales aquí)
-        const SUPABASE_URL = "https://gybnyxflhybfgtxjwmqd.supabase.co/rest/v1/"; 
-        const SUPABASE_KEY = "process.env.SUPABASE_KEY";
-        let supabase = null;
+        // -------------------------------------------------------------
+        // CONFIGURACIÓN DE SUPABASE
+        // REEMPLAZA ESTOS VALORES CON LOS DE TU PROYECTO (Settings > API)
+        const SUPABASE_URL = "https://gybnyxflhybfgtxjwmqd.supabase.co/rest/v1/";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5Ym55eGZsaHliZmd0eGp3bXFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMDU5NjgsImV4cCI6MjA5OTY4MTk2OH0.tYIKAfIA7Mi1Y7O48QIbUnuKcj4QH9o244vMBS2PdBk";
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // -------------------------------------------------------------
 
         let baseDatos = [];
-        let miGraficoBarras = null;
-        let miGraficoPastel = null;
+        let miGrafico = null;
 
-        const categories = [
+        const categorias = [
             "Soporte técnico brindado ante inconvenientes a usuarios",
             "Hardware reparado, diagnosticado o gestión de garantía",
             "Mantenimiento preventivo y correctivo a equipos",
@@ -183,45 +267,50 @@
             "Otras actividades"
         ];
 
-        // Función que inicializa la base de datos de manera automática al abrir la web
-        function inicializarConexionCloud() {
-            if(SUPABASE_URL.includes("TU_PROYECTO") || SUPABASE_KEY.includes("TU_API_KEY")) {
-                console.log("Modo local temporal activo. Rellena las constantes URL y KEY en el código para conectar a la nube.");
-                actualizarDashboard();
-                renderizarHistorial();
-                return;
-            }
+        // 1. CONTROL DE ACCESO (LOGIN)
+        function intentarLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorTxt = document.getElementById('login-error');
 
-            try {
-                if(!supabase) {
-                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                }
-                descargarDatosDeLaNube();
-            } catch(e) {
-                console.error("Error inicializando cliente Supabase:", e);
-                actualizarDashboard();
+            if (user === "admin" && pass === "admin123") {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                inicializarApp();
+            } else {
+                errorTxt.textContent = "Usuario o contraseña inválidos.";
+                errorTxt.classList.remove('hidden');
             }
         }
 
+        function logout() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('main-content').classList.add('hidden');
+        }
+
+        // 2. NAVEGACIÓN ENTRE PESTAÑAS
         function cambiarVista(vistaId) {
             document.querySelectorAll('.vista').forEach(el => el.classList.add('hidden'));
             document.getElementById(`vista-${vistaId}`).classList.remove('hidden');
             
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('bg-slate-800', 'text-blue-400', 'font-medium'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-blue-400', 'font-medium');
+                btn.classList.add('text-slate-300');
+            });
             
-            const targetBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => btn.getAttribute('onclick').includes(vistaId));
-            if(targetBtn) {
-                targetBtn.classList.add('bg-slate-800', 'text-blue-400', 'font-medium');
+            if(event && event.currentTarget) {
+                event.currentTarget.classList.add('bg-slate-800', 'text-blue-400', 'font-medium');
+                event.currentTarget.classList.remove('text-slate-300');
             }
 
-            if(vistaId === 'dashboard' || vistaId === 'historial') {
-                if(supabase) descargarDatosDeLaNube();
-                else { actualizarDashboard(); renderizarHistorial(); }
-            }
+            if(vistaId === 'dashboard') actualizarDashboard();
+            if(vistaId === 'historial') renderizarHistorial();
         }
 
+        // 3. SIMULACIÓN DE ESCANEO OCR AVANZADO
         function simularEscaneo(event) {
             if(!event.target.files.length) return;
+
             document.getElementById('scan-prompt').classList.add('hidden');
             document.getElementById('scan-loading').classList.remove('hidden');
 
@@ -234,29 +323,29 @@
                 document.getElementById('scan-nombre').value = "Ing. Carlos Mendoza";
                 document.getElementById('scan-depto').value = "Recursos Humanos";
                 document.getElementById('scan-tecnico').value = "Soporte Central";
-                document.getElementById('scan-problema').value = "Impresora no se conecta al segmento de red local tras mantenimiento";
-                document.getElementById('scan-diagnostico').value = "Dirección IP estática desconfigurada";
-                document.getElementById('scan-solucion').value = "Asignación manual de dirección IP libre y pruebas exitosas";
-            }, 2000);
+                document.getElementById('scan-problema').value = "Impresora no se conecta al segmento de red local tras mantenimiento estructural";
+                document.getElementById('scan-diagnostico').value = "Dirección IP estática desconfigurada en la tarjeta de red del equipo de impresión";
+                document.getElementById('scan-solucion').value = "Asignación manual de dirección IP libre y pruebas exitosas de comunicación de red";
+            }, 2500);
         }
 
-        async function descargarDatosDeLaNube() {
-            if(!supabase) return;
+        // 4. SYNC CON SUPABASE: OBTENER DATOS
+        async function cargarDatosDesdeSupabase() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('tickets_ti')
+                    .select('*')
+                    .order('created_at', { ascending: true });
 
-            const { data, error } = await supabase
-                .from('tickets')
-                .select('*')
-                .order('id', { ascending: true });
-
-            if (error) {
-                console.error("Error obteniendo datos cloud:", error);
-            } else {
+                if (error) throw error;
                 baseDatos = data || [];
-                actualizarDashboard();
-                renderizarHistorial();
+            } catch (error) {
+                console.error("Error cargando datos de Supabase:", error.message);
+                alert("No se pudieron cargar los datos desde la nube.");
             }
         }
 
+        // 5. SYNC CON SUPABASE: GUARDAR REGISTROS
         async function guardarSoporte(tipo) {
             const prefijo = tipo === 'scan' ? 'scan' : 'manual';
             
@@ -270,144 +359,154 @@
             const solucion = document.getElementById(`${prefijo}-solucion`).value;
 
             if(!nombre || !depto || !problema || !solucion) {
-                alert("Completa los campos principales.");
+                alert("Por favor completa los campos principales antes de guardar.");
                 return;
             }
 
             const parrafoFormateado = `Se atendió el ticket de: ${actividad}, solicitado por el usuario: ${nombre.toUpperCase()}, perteneciente: ${depto.toUpperCase()} donde presento el inconveniente: ${problema}, donde se diagnostico: ${diagnostico}, dando la solución: ${solucion}.`;
 
-            if(!supabase) {
-                const nuevoLocal = { actividad, fecha, nombre, depto, problema, tecnico, diagnostico, solucion, parrafo_formateado: parrafoFormateado };
-                baseDatos.push(nuevoLocal);
-                alert("Guardado localmente de forma temporal (Falta configurar Supabase).");
-                resetearFormularios();
-                cambiarVista('historial');
-                return;
-            }
+            const nuevoRegistro = {
+                actividad, fecha, nombre, depto, problema, tecnico, diagnostico, solucion, parrafoFormateado
+            };
 
-            const { error } = await supabase
-                .from('tickets')
-                .insert([{ 
-                    actividad, fecha, nombre, depto, problema, tecnico, diagnostico, solucion, 
-                    parrafo_formateado: parrafoFormateado 
-                }]);
+            try {
+                // Insertar directamente en la tabla de Supabase
+                const { error } = await supabaseClient
+                    .from('tickets_ti')
+                    .insert([nuevoRegistro]);
 
-            if (error) {
-                alert("Error al guardar: " + error.message);
-            } else {
-                alert("¡Sincronizado con éxito!");
+                if (error) throw error;
+
+                alert("Soporte registrado en la nube con éxito.");
                 resetearFormularios();
-                descargarDatosDeLaNube();
+                
+                // Recargar memoria local y mover vista
+                await cargarDatosDesdeSupabase();
                 cambiarVista('historial');
+
+            } catch (error) {
+                console.error("Error al guardar en Supabase:", error.message);
+                alert("Error crítico: No se pudo guardar en la base de datos remota.");
             }
         }
 
         function resetearFormularios() {
-            ['manual-nombre', 'manual-depto', 'manual-tecnico', 'manual-problema', 'manual-diagnostico', 'manual-solucion'].forEach(id => document.getElementById(id).value = '');
+            ['manual-nombre', 'manual-depto', 'manual-tecnico', 'manual-problema', 'manual-diagnostico', 'manual-solucion'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
             document.getElementById('resultado-ocr').classList.add('hidden');
         }
 
-        function renderizarHistorial() {
+        // 6. RENDERIZACIÓN HISTORIAL
+        async function renderizarHistorial() {
             const contenedor = document.getElementById('contenedor-parrafos');
+            contenedor.innerHTML = '<div class="text-center py-4 text-gray-500 animate-pulse">Sincronizando con la nube...</div>';
+
+            await cargarDatosDesdeSupabase();
+
             contenedor.innerHTML = '';
 
             if(baseDatos.length === 0) {
-                contenedor.innerHTML = `<div class="bg-white p-6 rounded-xl border text-center text-gray-400">No hay registros centralizados aún.</div>`;
+                contenedor.innerHTML = `<div class="bg-white p-6 rounded-xl border border-gray-200 text-center text-gray-400">No hay registros procesados actualmente en la base de datos remota.</div>`;
                 return;
             }
 
             baseDatos.forEach((item, index) => {
                 const card = document.createElement('div');
-                card.className = "bg-white p-5 rounded-xl shadow-xs border-l-4 border-blue-600 border border-gray-200 space-y-2";
+                card.className = "bg-white p-5 rounded-xl shadow-xs border-l-4 border-blue-600 border-y border-r border-gray-200 space-y-2";
                 card.innerHTML = `
                     <div class="flex items-center justify-between text-xs text-gray-400 font-semibold uppercase">
                         <span>Registro #${index + 1} - ${item.fecha || 'Sin fecha'}</span>
                         <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded">${item.tecnico || 'TI'}</span>
                     </div>
-                    <p class="text-gray-800 text-sm leading-relaxed font-medium">${item.parrafo_formateado}</p>
+                    <p class="text-gray-800 text-sm leading-relaxed font-medium">${item.parrafoFormateado}</p>
                 `;
                 contenedor.appendChild(card);
             });
         }
 
+        // 7. SYNC CON SUPABASE: LIMPIAR HISTORIAL (TRUNCATE)
+        async function limpiarHistorial() {
+            if(confirm("¿Seguro que deseas borrar TODOS los registros almacenados en Supabase? Esta acción no se puede deshacer.")) {
+                try {
+                    // Elimina todas las filas de la tabla
+                    const { error } = await supabaseClient
+                        .from('tickets_ti')
+                        .delete()
+                        .neq('id', 0); // Truco estándar para seleccionar todo
+
+                    if (error) throw error;
+
+                    baseDatos = [];
+                    renderizarHistorial();
+                } catch (error) {
+                    console.error("Error al limpiar base de datos:", error.message);
+                    alert("No se pudo vaciar la tabla.");
+                }
+            }
+        }
+
+        // 8. INICIALIZADOR GLOBAL DE LA APP
+        async function inicializarApp() {
+            await cargarDatosDesdeSupabase();
+            actualizarDashboard();
+        }
+
+        // 9. ACTUALIZACIÓN DEL DASHBOARD CON VALORES REALES DE LA NUBE
         function actualizarDashboard() {
             document.getElementById('card-total').textContent = baseDatos.length;
             if(baseDatos.length > 0) {
                 document.getElementById('card-ultimo').textContent = baseDatos[baseDatos.length - 1].nombre;
+            } else {
+                document.getElementById('card-ultimo').textContent = "Ninguno";
             }
 
-            const conteo = categories.map(cat => {
-                return baseDatos.filter(ticket => ticket.actividad.includes(cat.substring(0,15))).length; 
+            const conteo = categorias.map(cat => {
+                return baseDatos.filter(ticket => ticket.actividad && ticket.actividad.includes(cat.substring(0,15))).length; 
             });
 
-            const coloresFondos = [
-                'rgba(37, 99, 235, 0.75)', 
-                'rgba(220, 38, 38, 0.75)', 
-                'rgba(217, 119, 6, 0.75)', 
-                'rgba(13, 148, 136, 0.75)', 
-                'rgba(147, 51, 234, 0.75)', 
-                'rgba(75, 85, 99, 0.75)'
-            ];
-            const coloresBordes = ['#2563eb', '#dc2626', '#d97706', '#0d9488', '#9333ea', '#4b5563'];
-            const etiquetasCortas = ['1. Soporte', '2. Hardware', '3. Mantenimiento', '4. Redes', '5. Usuarios', '6. Otros'];
+            const ctx = document.getElementById('graficoActividades').getContext('2d');
+            
+            if(miGrafico) miGrafico.destroy();
 
-            // 1. RENDER GRÁFICO DE BARRAS
-            const ctxBarras = document.getElementById('graficoActividades').getContext('2d');
-            if(miGraficoBarras) miGraficoBarras.destroy();
-
-            miGraficoBarras = new Chart(ctxBarras, {
+            miGrafico = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: etiquetasCortas,
+                    labels: ['1. Soporte', '2. Hardware/Garantía', '3. Mantenimiento', '4. Redes', '5. Usuarios/Sistemas', '6. Otros'],
                     datasets: [{
+                        label: 'Cantidad de Actividades',
                         data: conteo,
-                        backgroundColor: coloresFondos,
-                        borderColor: coloresBordes,
-                        borderWidth: 1,
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-                }
-            });
-
-            // 2. RENDER GRÁFICO DE PASTEL (PIE CHART)
-            const ctxPastel = document.getElementById('graficoPastel').getContext('2d');
-            if(miGraficoPastel) miGraficoPastel.destroy();
-
-            miGraficoPastel = new Chart(ctxPastel, {
-                type: 'pie',
-                data: {
-                    labels: etiquetasCortas,
-                    datasets: [{
-                        data: conteo,
-                        backgroundColor: coloresFondos,
-                        borderColor: '#ffffff',
-                        borderWidth: 2
+                        backgroundColor: [
+                            'rgba(37, 99, 235, 0.75)',
+                            'rgba(220, 38, 38, 0.75)',
+                            'rgba(217, 119, 6, 0.75)',
+                            'rgba(13, 148, 136, 0.75)',
+                            'rgba(147, 51,  purple, 0.75)',
+                            'rgba(75, 85, 99, 0.75)'
+                        ],
+                        borderColor: [
+                            '#2563eb', '#dc2626', '#d97706', '#0d9488', '#9333ea', '#4b5563'
+                        ],
+                        borderWidth: 1.5,
+                        borderRadius: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: { boxWidth: 12, font: { size: 11 } }
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
                         }
                     }
                 }
             });
         }
-
-        // Se ejecuta automáticamente al cargar el documento
-        window.addEventListener('DOMContentLoaded', () => {
-            inicializarConexionCloud();
-        });
     </script>
 </body>
 </html>
